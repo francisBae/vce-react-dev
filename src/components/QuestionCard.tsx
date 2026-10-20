@@ -90,15 +90,30 @@ const Option = styled.li<{
             if ($selected) return '#e5e7eb'; // 선택된 답변 회색
             return '#f9fafb'; // 기본 배경색
         }
-        return $selected ? '#e5e7eb' : '#f9fafb';
+        return $selected ? '#eff6ff' : '#f9fafb'; // 선택된 답변은 연한 파란색
     }};
-    border: 1px solid #e5e7eb;
+    /* 선택된 옵션은 테두리로 표시 (hover와 구분). 정답 공개 후에는 정/오답 색상으로 테두리 표시 */
+    border: 1px solid
+        ${({ $selected, $correct, $wrong }) => {
+            if (!$selected) return '#e5e7eb';
+            if ($correct) return '#22c55e';
+            if ($wrong) return '#ef4444';
+            return '#2563eb';
+        }};
+    /* inset shadow로 테두리를 2px처럼 보이게 해서 레이아웃이 밀리지 않도록 함 */
+    box-shadow: ${({ $selected, $correct, $wrong }) => {
+        if (!$selected) return 'none';
+        if ($correct) return 'inset 0 0 0 1px #22c55e';
+        if ($wrong) return 'inset 0 0 0 1px #ef4444';
+        return 'inset 0 0 0 1px #2563eb';
+    }};
     border-radius: 8px;
     margin-bottom: 0.5rem;
     padding: 0.75rem 1rem;
     cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
     transition: all 0.2s ease;
     font-size: 1rem;
+    -webkit-tap-highlight-color: transparent;
 
     @media (max-width: 640px) {
         font-size: 0.9rem;
@@ -106,8 +121,11 @@ const Option = styled.li<{
         margin-bottom: 0.4rem;
     }
 
-    &:hover {
-        background: ${({ $disabled }) => ($disabled ? 'inherit' : '#e5e7eb')};
+    /* 터치 기기에서는 탭 후 hover가 남아 선택처럼 보이므로, 실제 hover 가능한 기기에서만 적용 */
+    @media (hover: hover) {
+        &:hover {
+            ${({ $disabled, $selected }) => (!$disabled && !$selected ? 'background: #e5e7eb;' : '')}
+        }
     }
 
     b {
