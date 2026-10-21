@@ -1,6 +1,17 @@
 import React, { useEffect, useId, useState } from 'react';
 import styled from 'styled-components';
 import type { Question } from '../types/question';
+import { useQuizStore } from '../store/quizStore';
+import { getAnswerKeywords } from '../data/keywords';
+import { splitByKeywords } from '../utils/highlightKeywords';
+
+// 키워드 강조 색상 (정답 보기 순서대로 다른 색). 글자색은 배경 대비 4.5:1 이상
+const KEYWORD_COLORS = [
+    { bg: '#fde68a', fg: '#78350f' }, // amber
+    { bg: '#fbcfe8', fg: '#831843' }, // pink
+    { bg: '#a5f3fc', fg: '#164e63' }, // cyan
+    { bg: '#ddd6fe', fg: '#4c1d95' }, // violet
+];
 
 const Card = styled.div`
     background: #fff;
@@ -206,6 +217,64 @@ const ExplanationBox = styled.div`
     }
 `;
 
+const KeywordToolbar = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.5rem;
+`;
+
+const KeywordSwitch = styled.button<{ $on: boolean }>`
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: ${({ $on }) => ($on ? '#fffbeb' : '#fff')};
+    border: 1px solid ${({ $on }) => ($on ? '#f59e0b' : '#d1d5db')};
+    color: ${({ $on }) => ($on ? '#92400e' : '#4b5563')};
+    border-radius: 999px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:focus-visible {
+        outline: 2px solid #1d4ed8;
+        outline-offset: 2px;
+    }
+
+    /* 스위치 트랙 */
+    .track {
+        position: relative;
+        width: 28px;
+        height: 16px;
+        border-radius: 999px;
+        background: ${({ $on }) => ($on ? '#f59e0b' : '#d1d5db')};
+        transition: background 0.2s;
+    }
+
+    /* 스위치 손잡이 */
+    .thumb {
+        position: absolute;
+        top: 2px;
+        left: ${({ $on }) => ($on ? '14px' : '2px')};
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #fff;
+        transition: left 0.2s;
+    }
+`;
+
+const KeywordMark = styled.mark<{ $colorIndex: number }>`
+    background: ${({ $colorIndex }) => KEYWORD_COLORS[$colorIndex % KEYWORD_COLORS.length].bg};
+    color: ${({ $colorIndex }) => KEYWORD_COLORS[$colorIndex % KEYWORD_COLORS.length].fg};
+    font-weight: 700;
+    padding: 0 0.15em;
+    border-radius: 3px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+`;
+
 const Img = styled.img`
     max-width: 100%;
     margin: 0.5rem 0;
@@ -226,6 +295,7 @@ interface Props {
     isReviewMode?: boolean;
     examMode?: string;
     scoredQuestions?: number[];
+    examTypeId?: string; // 답변 키워드 조회용. 키워드가 있는 시험에서만 키워드 모드 스위치 표시
 }
 
 export const QuestionCard: React.FC<Props> = ({
@@ -243,9 +313,30 @@ export const QuestionCard: React.FC<Props> = ({
     isReviewMode = false,
     examMode,
     scoredQuestions,
+    examTypeId,
 }) => {
     const [showExplanation, setShowExplanation] = useState(false);
     const explanationId = useId();
+    const keywordMode = useQuizStore((s) => s.keywordMode);
+    const toggleKeywordMode = useQuizStore((s) => s.toggleKeywordMode);
+    const answerKeywords = getAnswerKeywords(examTypeId, question.number);
+    const keywordLetters = answerKeywords ? Object.keys(answerKeywords).sort() : [];
+
+    // 키워드 모드일 때 정답 보기 안의 키워드를 강조. 정답 보기마다 다른 색 사용
+    const renderOptionText = (opt: string, letter: string) => {
+        const keywords = answerKeywords?.[letter];
+        if (!keywordMode || !keywords?.length) return opt;
+        const colorIndex = keywordLetters.indexOf(letter);
+        return splitByKeywords(opt, keywords).map((seg, i) =>
+            seg.highlighted ? (
+                <KeywordMark key={i} $colorIndex={colorIndex}>
+                    {seg.text}
+                </KeywordMark>
+            ) : (
+                <React.Fragment key={i}>{seg.text}</React.Fragment>
+            ),
+        );
+    };
 
     // 문제가 바뀌거나 정답을 숨기면 해설은 다시 접힌 상태로
     useEffect(() => {
@@ -303,6 +394,23 @@ export const QuestionCard: React.FC<Props> = ({
 
     return (
         <Card>
+            {answerKeywords && (
+                <KeywordToolbar>
+                    <KeywordSwitch
+                        type="button"
+                        role="switch"
+                        aria-checked={keywordMode}
+                        $on={keywordMode}
+                        onClick={toggleKeywordMode}
+                        title="정답 보기의 답변 키워드를 강조 표시합니다"
+                    >
+                        <span className="track" aria-hidden="true">
+                            <span className="thumb" />
+                        </span>
+                        키워드 {keywordMode ? 'ON' : 'OFF'}
+                    </KeywordSwitch>
+                </KeywordToolbar>
+            )}
             <Title>
                 {questionNumber ? (
                     <>
@@ -343,7 +451,7 @@ export const QuestionCard: React.FC<Props> = ({
                             $disabled={showAnswer}
                             onClick={() => handleSelect(letter)}
                         >
-                            <b>{letter}.</b> {opt}
+                            <b>{letter}.</b> {renderOptionText(opt, letter)}
                         </Option>
                     );
                 })}
