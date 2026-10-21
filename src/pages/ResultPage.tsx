@@ -378,6 +378,7 @@ const ResultPage: React.FC = () => {
                     : `${q.examOrder}번 - Examtopic ${q.number}번`
                 }
                 hideAnswerButton={true}
+                examTypeId={selectedExamType}
               />
             );
           })}

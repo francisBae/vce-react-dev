@@ -136,7 +136,8 @@ const QuizPage: React.FC = () => {
     finishExam,
     saveExamProgress,
     // setCurrent,
-    retryCurrentMode
+    retryCurrentMode,
+    selectedExamType
   } = useQuizStore();
 
   useEffect(() => {
@@ -310,6 +311,7 @@ const QuizPage: React.FC = () => {
         showAnswer={showAnswer}
         onShowAnswer={handleShowAnswer}
         hideNumber={!!examMode && (examMode.mode === 'random' || examMode.isRandom || examMode.mode === 'practice')}
+        examTypeId={selectedExamType}
       />
     </Container>
   );

@@ -458,6 +458,7 @@ const ExamDetailPage: React.FC = () => {
               isReviewMode={true}
               examMode={examResult.examMode}
               scoredQuestions={examResult.scoredQuestions}
+              examTypeId={examResult.examTypeId}
             />
           ))}
         </QuestionsSection>
