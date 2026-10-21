@@ -61,7 +61,19 @@ interface QuizState {
   retryCurrentMode: (keepAnswers?: boolean) => void;
   clearAllExamResults: () => void;
   deleteExamResultsByType: (examTypeId: string) => void;
+  keywordMode: boolean; // 답변 키워드 강조 모드 (on/off)
+  toggleKeywordMode: () => void;
 }
+
+const KEYWORD_MODE_KEY = 'keyword-mode';
+
+const getInitialKeywordMode = (): boolean => {
+  try {
+    return localStorage.getItem(KEYWORD_MODE_KEY) === 'on';
+  } catch {
+    return false;
+  }
+};
 
 const getInitial = () => {
   try {
@@ -109,6 +121,16 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   examStartTime: null,
   examResults: [],
   currentExamProgress: null,
+  keywordMode: getInitialKeywordMode(),
+  toggleKeywordMode: () => set(state => {
+    const keywordMode = !state.keywordMode;
+    try {
+      localStorage.setItem(KEYWORD_MODE_KEY, keywordMode ? 'on' : 'off');
+    } catch {
+      // 저장 실패해도 현재 세션에서는 동작하도록 무시
+    }
+    return { keywordMode };
+  }),
   setAnswer: (number, answer) => set(state => {
     const answers = { ...state.answers, [number]: answer };
     return { answers };
